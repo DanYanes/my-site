@@ -484,9 +484,15 @@
             </div>`;
         }
 
+        function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
         async function loadNews() {
             try {
-                const results = await Promise.all(newsCities.map(fetchNews));
+                const results = [];
+                for (const city of newsCities) {
+                    results.push(await fetchNews(city));
+                    await delay(1200);
+                }
                 document.getElementById('news-grid').innerHTML = results.map(renderNewsColumn).join('');
             } catch (e) {
                 document.getElementById('news-grid').innerHTML =
