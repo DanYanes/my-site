@@ -454,11 +454,19 @@
 
         async function fetchNews(city) {
             const rssUrl = encodeURIComponent(
-                `https://news.google.com/rss/search?q=${city.query}&hl=en-US&gl=US&ceid=US:en`
+                `https://news.google.com/rss/search?q=${city.query}+when:7d&hl=en-US&gl=US&ceid=US:en`
             );
             const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
             const data = await res.json();
-            return { city, items: (data.items || []).slice(0, 5) };
+
+            const skip = /rape|murder|homicide|stabbing|shooting|killed|assault|robbery|carjack|kidnap|arrest|charged with|accused of|crash kills|fatal/i;
+            const oneWeekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+            const filtered = (data.items || [])
+                .filter(item => new Date(item.pubDate).getTime() >= oneWeekAgo)
+                .filter(item => !skip.test(item.title))
+                .slice(0, 5);
+
+            return { city, items: filtered };
         }
 
         function renderNewsColumn({ city, items }) {
