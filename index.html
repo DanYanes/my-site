@@ -275,6 +275,75 @@
             opacity: 0.4;
             font-size: 0.9rem;
         }
+        /* Birthday Countdown Section */
+        .birthday-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+        .birthday-card {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 36px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+        .birthday-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .birthday-emoji { font-size: 3rem; margin-bottom: 12px; }
+        .birthday-name { font-size: 1.4rem; font-weight: 600; margin-bottom: 4px; }
+        .birthday-date { font-size: 0.85rem; opacity: 0.5; margin-bottom: 16px; }
+        .birthday-countdown {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fd79a8, #e84393, #fd79a8);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+        }
+        .birthday-countdown-label {
+            font-size: 0.85rem;
+            opacity: 0.5;
+            margin-top: 4px;
+        }
+        .birthday-today .birthday-countdown {
+            background: linear-gradient(90deg, #ffeaa7, #fdcb6e, #ffeaa7);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        /* Events Section */
+        .event-item {
+            display: block;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            text-decoration: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .event-item:last-child { border-bottom: none; }
+        .event-item:hover {
+            padding-left: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+        }
+        .event-item-title {
+            font-size: 0.92rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+        .event-item-meta {
+            font-size: 0.72rem;
+            opacity: 0.4;
+        }
     </style>
 </head>
 <body>
@@ -292,11 +361,22 @@
             </div>
         </div>
 
+        <h2 class="section-title">🎂 Birthday Countdowns</h2>
+        <div class="birthday-grid" id="birthday-grid"></div>
+
         <h2 class="section-title">📰 Local News</h2>
         <div class="news-grid" id="news-grid">
             <div class="loading">
                 <div class="loading-spinner"></div>
                 Loading headlines...
+            </div>
+        </div>
+
+        <h2 class="section-title">🎭 Local Events</h2>
+        <div class="news-grid" id="events-grid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                Loading events...
             </div>
         </div>
     </div>
@@ -437,6 +517,47 @@
         init();
         setInterval(init, 10 * 60 * 1000);
 
+        // --- Birthday Countdowns ---
+        const birthdays = [
+            { name: 'Daniel', city: 'St. Louis', month: 9, day: 14 },
+            { name: 'Zach', city: 'New Haven', month: 4, day: 29 },
+            { name: 'Ben', city: 'Jersey City', month: 5, day: 7 }
+        ];
+
+        function renderBirthdays() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const MONTHS = ['','January','February','March','April','May','June',
+                            'July','August','September','October','November','December'];
+
+            const cards = birthdays
+                .map(b => {
+                    let next = new Date(now.getFullYear(), b.month - 1, b.day);
+                    if (next < today) next = new Date(now.getFullYear() + 1, b.month - 1, b.day);
+                    const diff = Math.ceil((next - today) / 86400000);
+                    return { ...b, diff, next };
+                })
+                .sort((a, b) => a.diff - b.diff)
+                .map(b => {
+                    const isToday = b.diff === 0;
+                    const emoji = isToday ? '🥳' : '🎂';
+                    const countText = isToday ? 'Today!' : b.diff;
+                    const label = isToday ? 'Happy Birthday!' : (b.diff === 1 ? 'day to go' : 'days to go');
+                    return `<div class="birthday-card ${isToday ? 'birthday-today' : ''}">
+                        <div class="birthday-emoji">${emoji}</div>
+                        <div class="birthday-name">${b.name}</div>
+                        <div class="birthday-date">${MONTHS[b.month]} ${b.day} · ${b.city}</div>
+                        <div class="birthday-countdown">${countText}</div>
+                        <div class="birthday-countdown-label">${label}</div>
+                    </div>`;
+                }).join('');
+
+            document.getElementById('birthday-grid').innerHTML = cards;
+        }
+
+        renderBirthdays();
+        setInterval(renderBirthdays, 60 * 60 * 1000);
+
         // --- News Section ---
         const newsCities = [
             { name: 'St. Louis', state: 'Missouri', query: 'St.+Louis+Missouri' },
@@ -510,6 +631,70 @@
 
         loadNews();
         setInterval(loadNews, 15 * 60 * 1000);
+
+        // --- Events Section ---
+        const eventsCities = [
+            { name: 'St. Louis', state: 'Missouri', query: 'St.+Louis+Missouri+events+OR+festival+OR+concert+OR+community+OR+fair' },
+            { name: 'New Haven', state: 'Connecticut', query: 'New+Haven+Connecticut+events+OR+festival+OR+concert+OR+community+OR+fair' },
+            { name: 'Jersey City', state: 'New Jersey', query: 'Jersey+City+New+Jersey+events+OR+festival+OR+concert+OR+community+OR+fair' }
+        ];
+
+        async function fetchEvents(city) {
+            const rssUrl = encodeURIComponent(
+                `https://news.google.com/rss/search?q=${city.query}+when:7d&hl=en-US&gl=US&ceid=US:en`
+            );
+            const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
+            const data = await res.json();
+
+            const skip = /rape|murder|homicide|stabbing|shooting|killed|assault|robbery|carjack|kidnap|arrest|charged with|accused of|crash kills|fatal|sentenced|indicted/i;
+            const oneWeekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+            const filtered = (data.items || [])
+                .filter(item => new Date(item.pubDate).getTime() >= oneWeekAgo)
+                .filter(item => !skip.test(item.title))
+                .slice(0, 5);
+
+            return { city, items: filtered };
+        }
+
+        function renderEventsColumn({ city, items }) {
+            if (!items.length) {
+                return `<div class="news-column">
+                    <div class="news-column-header">🎭 ${city.name}</div>
+                    <div class="news-column-sub">${city.state}</div>
+                    <div class="news-loading">No events found this week</div>
+                </div>`;
+            }
+            const rows = items.map(item => {
+                const source = item.author || '';
+                return `<a class="event-item" href="${item.link}" target="_blank" rel="noopener">
+                    <div class="event-item-title">${item.title}</div>
+                    <div class="event-item-meta">${source}${source ? ' · ' : ''}${timeAgo(item.pubDate)}</div>
+                </a>`;
+            }).join('');
+
+            return `<div class="news-column">
+                <div class="news-column-header">🎭 ${city.name}</div>
+                <div class="news-column-sub">${city.state}</div>
+                ${rows}
+            </div>`;
+        }
+
+        async function loadEvents() {
+            try {
+                const results = [];
+                for (const city of eventsCities) {
+                    results.push(await fetchEvents(city));
+                    await delay(1200);
+                }
+                document.getElementById('events-grid').innerHTML = results.map(renderEventsColumn).join('');
+            } catch (e) {
+                document.getElementById('events-grid').innerHTML =
+                    '<div class="news-loading">⚠️ Could not load events. Please refresh.</div>';
+            }
+        }
+
+        loadEvents();
+        setInterval(loadEvents, 15 * 60 * 1000);
     </script>
 </body>
 </html>
