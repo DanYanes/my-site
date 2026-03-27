@@ -208,6 +208,73 @@
         .temp-mild { color: #ffeaa7; }
         .temp-warm { color: #fdcb6e; }
         .temp-hot { color: #e17055; }
+
+        /* News Section */
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 60px 0 30px;
+            background: linear-gradient(90deg, #ffeaa7, #fdcb6e, #ffeaa7);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+        }
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+        .news-column {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 28px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .news-column-header {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .news-column-sub {
+            font-size: 0.8rem;
+            opacity: 0.4;
+            margin-bottom: 18px;
+        }
+        .news-item {
+            display: block;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            text-decoration: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .news-item:last-child { border-bottom: none; }
+        .news-item:hover {
+            padding-left: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+        }
+        .news-item-title {
+            font-size: 0.92rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+        .news-item-meta {
+            font-size: 0.72rem;
+            opacity: 0.4;
+        }
+        .news-loading {
+            text-align: center;
+            padding: 30px;
+            opacity: 0.4;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -222,6 +289,14 @@
             <div class="loading">
                 <div class="loading-spinner"></div>
                 Fetching weather data...
+            </div>
+        </div>
+
+        <h2 class="section-title">📰 Local News</h2>
+        <div class="news-grid" id="news-grid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                Loading headlines...
             </div>
         </div>
     </div>
@@ -361,6 +436,66 @@
 
         init();
         setInterval(init, 10 * 60 * 1000);
+
+        // --- News Section ---
+        const newsCities = [
+            { name: 'St. Louis', state: 'Missouri', query: 'St.+Louis+Missouri' },
+            { name: 'New Haven', state: 'Connecticut', query: 'New+Haven+Connecticut' },
+            { name: 'Jersey City', state: 'New Jersey', query: 'Jersey+City+New+Jersey' }
+        ];
+
+        function timeAgo(dateStr) {
+            const diff = Date.now() - new Date(dateStr).getTime();
+            const hrs = Math.floor(diff / 3600000);
+            if (hrs < 1) return 'Just now';
+            if (hrs < 24) return hrs + 'h ago';
+            return Math.floor(hrs / 24) + 'd ago';
+        }
+
+        async function fetchNews(city) {
+            const rssUrl = encodeURIComponent(
+                `https://news.google.com/rss/search?q=${city.query}&hl=en-US&gl=US&ceid=US:en`
+            );
+            const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
+            const data = await res.json();
+            return { city, items: (data.items || []).slice(0, 5) };
+        }
+
+        function renderNewsColumn({ city, items }) {
+            if (!items.length) {
+                return `<div class="news-column">
+                    <div class="news-column-header">${city.name}</div>
+                    <div class="news-column-sub">${city.state}</div>
+                    <div class="news-loading">No headlines available</div>
+                </div>`;
+            }
+            const rows = items.map(item => {
+                const source = item.author || '';
+                return `<a class="news-item" href="${item.link}" target="_blank" rel="noopener">
+                    <div class="news-item-title">${item.title}</div>
+                    <div class="news-item-meta">${source}${source ? ' · ' : ''}${timeAgo(item.pubDate)}</div>
+                </a>`;
+            }).join('');
+
+            return `<div class="news-column">
+                <div class="news-column-header">${city.name}</div>
+                <div class="news-column-sub">${city.state}</div>
+                ${rows}
+            </div>`;
+        }
+
+        async function loadNews() {
+            try {
+                const results = await Promise.all(newsCities.map(fetchNews));
+                document.getElementById('news-grid').innerHTML = results.map(renderNewsColumn).join('');
+            } catch (e) {
+                document.getElementById('news-grid').innerHTML =
+                    '<div class="news-loading">⚠️ Could not load news. Please refresh.</div>';
+            }
+        }
+
+        loadNews();
+        setInterval(loadNews, 15 * 60 * 1000);
     </script>
 </body>
 </html>
